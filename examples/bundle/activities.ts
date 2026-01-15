@@ -3,7 +3,7 @@ import {
   createActivity,
   type ActivityReference,
   type CreateActivity,
-} from '@segundoai/temporal-graph-tools'
+} from '@primero-ai/temporal-graph-tools'
 
 export type FetchUserInput = { userId: string }
 

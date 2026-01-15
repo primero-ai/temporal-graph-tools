@@ -1,4 +1,4 @@
-import { createActivity, createWorkflowBuilder } from '@segundoai/temporal-graph-tools'
+import { createActivity, createWorkflowBuilder } from '@primero-ai/temporal-graph-tools'
 import {
   endGreet,
   fetchUserProfile,

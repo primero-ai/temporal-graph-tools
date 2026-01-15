@@ -1,3 +1,4 @@
+import type { ActivityOptions } from '@temporalio/workflow'
 import type {
   ActivityBundle,
   ActivityConfig,
@@ -10,7 +11,6 @@ import type {
 } from '../types.js'
 import { getActivitySourceFile } from '../types.js'
 import { deepEqual } from '../utils/deep-equal.js'
-import type { ActivityOptions } from '@temporalio/workflow'
 
 type NormalizedStep = {
   key: string

@@ -1,9 +1,5 @@
 import { isAbsolute, resolve } from 'node:path'
-import type {
-  ActivityBundle,
-  WorkflowBuildResult,
-  WorkflowSourceArtifact,
-} from './types.js'
+import type { ActivityBundle, WorkflowBuildResult, WorkflowSourceArtifact } from './types.js'
 import type { ActivityImplementations } from './workflow-bundler.js'
 import { buildWorkflowBundleCode } from './workflow-bundler.js'
 import { collectWorkflowBuildResults } from './workflow/collection.js'
@@ -173,7 +169,7 @@ async function bundleActivitiesWithEsbuild(
   }
 
   const filename = (options.filename ?? 'activities.bundle.mjs').trim()
-  const externals = new Set<string>(['@segundoai/temporal-graph-tools'])
+  const externals = new Set<string>(['@primero-ai/temporal-graph-tools'])
 
   ;(options.externals ?? []).forEach((name) => {
     if (typeof name === 'string' && name.trim().length > 0) {

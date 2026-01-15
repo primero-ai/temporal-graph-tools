@@ -11,9 +11,7 @@ export type ActivityConfig<Id extends string = string> = ActivityOptions & {
 
 const ACTIVITY_SELF_SEGMENT = '/temporal-graph-tools/'
 
-export const ACTIVITY_SOURCE_SYMBOL = Symbol.for(
-  '@segundoai/temporal-graph-tools/activity-source',
-)
+export const ACTIVITY_SOURCE_SYMBOL = Symbol.for('@primero-ai/temporal-graph-tools/activity-source')
 
 type ActivityMetadata = {
   sourceFile?: string

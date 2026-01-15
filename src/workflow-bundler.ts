@@ -6,7 +6,7 @@ import {
 } from '@temporalio/worker/lib/workflow/bundler.js'
 import { createFsFromVolume, Volume } from 'memfs'
 import type { IFs } from 'memfs'
-import { Union, ufs } from 'unionfs'
+import { ufs, Union } from 'unionfs'
 import type { IFS, IUnionFs } from 'unionfs'
 import type { WorkflowBuildResult, WorkflowSourceArtifact } from './types.js'
 
@@ -158,37 +158,34 @@ class VirtualWorkflowCodeBundler extends WorkflowCodeBundler {
     this.populateVirtualWorkflows(volume)
     const readdir = Object.assign(
       (...params: Parameters<typeof realFS.readdir>) => {
-        const args = [...params];
-        const callbackCandidate = args.pop();
+        const args = [...params]
+        const callbackCandidate = args.pop()
 
         if (typeof callbackCandidate !== 'function') {
-          return realFS.readdir(...params);
+          return realFS.readdir(...params)
         }
 
         const callback = callbackCandidate as (
           err: NodeJS.ErrnoException | null,
           files: unknown,
-        ) => void;
-        const wrappedCallback = (
-          err: NodeJS.ErrnoException | null,
-          files: unknown,
-        ): void => {
+        ) => void
+        const wrappedCallback = (err: NodeJS.ErrnoException | null, files: unknown): void => {
           if (err !== null) {
-            callback(err, files);
-            
-            return;
+            callback(err, files)
+
+            return
           }
 
           if (!Array.isArray(files)) {
-            callback(null, files);
-            
-            return;
+            callback(null, files)
+
+            return
           }
 
           if (!files.every((entry) => typeof entry === 'string')) {
-            callback(null, files);
-            
-            return;
+            callback(null, files)
+
+            return
           }
 
           const typedFiles = files as string[]
@@ -197,7 +194,7 @@ class VirtualWorkflowCodeBundler extends WorkflowCodeBundler {
           )
 
           callback(null, filtered)
-        };
+        }
 
         const patchedArgs = [...args, wrappedCallback] as Parameters<typeof realFS.readdir>
 
