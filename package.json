@@ -1,11 +1,18 @@
 {
-  "name": "@segundoai/temporal-graph-tools",
-  "version": "0.2.5",
+  "name": "@primero-ai/temporal-graph-tools",
+  "version": "1.0.0",
   "description": "Utilities for working with DAG workflows.",
+  "keywords": [],
+  "homepage": "https://github.com/primero-ai/temporal-graph-tools#readme",
+  "bugs": {
+    "url": "https://github.com/primero-ai/temporal-graph-tools/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/primero-ai/temporal-graph-tools.git"
+  },
   "license": "MIT",
-  "main": "dist/src/index.js",
-  "module": "dist/src/index.js",
-  "types": "dist/src/index.d.ts",
+  "author": "sergio",
   "type": "module",
   "exports": {
     ".": {
@@ -38,6 +45,11 @@
     },
     "./package.json": "./package.json"
   },
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "directories": {
+    "example": "examples"
+  },
   "files": [
     "dist"
   ],
@@ -51,12 +63,6 @@
     "trigger-workflows": "bun with-env bun examples/trigger-workflows.ts",
     "clean": "rm -rf node_modules dist"
   },
-  "keywords": [],
-  "author": "",
-  "engines": {
-    "node": ">=18"
-  },
-  "packageManager": "bun@1.2.17",
   "dependencies": {
     "@temporalio/activity": "^1.13.1",
     "@temporalio/client": "1.13.1",
@@ -81,5 +87,10 @@
     "prettier-plugin-tailwindcss": "^0.7.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.1"
-  }
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "module": "dist/src/index.js",
+  "packageManager": "bun@1.2.17"
 }
