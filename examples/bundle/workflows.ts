@@ -1,8 +1,10 @@
-import { createActivity, createWorkflowBuilder } from '@segundo/temporal-graph-tools'
+import { createActivity, createWorkflowBuilder } from '@primero.ai/temporal-graph-tools'
 import {
+  endGreet,
   fetchUserProfile,
   logCompletion,
   sendWelcomeEmail,
+  startGreet,
   syncCrmRecord,
   type FetchUserInput,
 } from './activities'
@@ -17,6 +19,6 @@ export const builderOnboarding = createWorkflowBuilder<FetchUserInput>({
   .commit()
 
 export const builderHelloWorld = createWorkflowBuilder<void>({ workflowName: 'greetWorkflow' })
-  .then(createActivity(() => console.log('Hello '), { id: 'startGreet' }))
-  .then(createActivity(() => console.log('World'), { id: 'finishGreet' }))
+  .then(startGreet)
+  .then(endGreet)
   .commit()

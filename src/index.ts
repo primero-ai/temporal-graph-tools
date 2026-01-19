@@ -1,8 +1,5 @@
-export * from '@segundo/temporal-graph-tools/types'
-export {
-  WorkflowBuilder,
-  createWorkflowBuilder,
-} from '@segundo/temporal-graph-tools/workflow/builder'
-export * from '@segundo/temporal-graph-tools/workflow-bundler'
-export { collectWorkflowBuildResults } from '@segundo/temporal-graph-tools/workflow/collection'
-export * from '@segundo/temporal-graph-tools/bundler'
+export * from './types.js'
+export { WorkflowBuilder, createWorkflowBuilder } from './workflow/builder.js'
+export * from './workflow-bundler.js'
+export { collectWorkflowBuildResults } from './workflow/collection.js'
+export * from './bundler.js'

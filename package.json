@@ -1,12 +1,55 @@
 {
-  "name": "@segundo/temporal-graph-tools",
-  "version": "0.1.0",
+  "name": "@primero.ai/temporal-graph-tools",
+  "version": "1.0.0",
   "description": "Utilities for working with DAG workflows.",
+  "keywords": [],
+  "homepage": "https://github.com/primero-ai/temporal-graph-tools#readme",
+  "bugs": {
+    "url": "https://github.com/primero-ai/temporal-graph-tools/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/primero-ai/temporal-graph-tools.git"
+  },
   "license": "MIT",
-  "main": "dist/index.js",
-  "module": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "author": "sergio",
   "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
+    },
+    "./bundler": {
+      "types": "./dist/src/bundler.d.ts",
+      "default": "./dist/src/bundler.js"
+    },
+    "./workflow-bundler": {
+      "types": "./dist/src/workflow-bundler.d.ts",
+      "default": "./dist/src/workflow-bundler.js"
+    },
+    "./workflow/*": {
+      "types": "./dist/src/workflow/*.d.ts",
+      "default": "./dist/src/workflow/*.js"
+    },
+    "./utils/*": {
+      "types": "./dist/src/utils/*.d.ts",
+      "default": "./dist/src/utils/*.js"
+    },
+    "./dist/src/*.js": {
+      "types": "./dist/src/*.d.ts",
+      "default": "./dist/src/*.js"
+    },
+    "./types": {
+      "types": "./dist/src/types.d.ts",
+      "default": "./dist/src/types.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "directories": {
+    "example": "examples"
+  },
   "files": [
     "dist"
   ],
@@ -20,20 +63,16 @@
     "trigger-workflows": "bun with-env bun examples/trigger-workflows.ts",
     "clean": "rm -rf node_modules dist"
   },
-  "keywords": [],
-  "author": "",
-  "engines": {
-    "node": ">=18"
-  },
-  "packageManager": "bun@1.2.17",
   "dependencies": {
     "@temporalio/activity": "^1.13.1",
     "@temporalio/client": "1.13.1",
     "@temporalio/workflow": "1.13.1",
     "@temporalio/worker": "1.13.1",
+    "lodash": "^4.17.21",
     "zod": "4.1.12"
   },
   "devDependencies": {
+    "@types/lodash": "^4.14.202",
     "tsx": "^4.19.2",
     "@eslint/js": "^9.37.0",
     "dotenv": "^17.2.1",
@@ -48,5 +87,10 @@
     "prettier-plugin-tailwindcss": "^0.7.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.1"
-  }
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "module": "dist/src/index.js",
+  "packageManager": "bun@1.2.17"
 }

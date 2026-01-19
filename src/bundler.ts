@@ -1,21 +1,103 @@
-import type {
-  WorkflowBuildResult,
-  WorkflowSourceArtifact,
-} from '@segundo/temporal-graph-tools/types'
-import type { ActivityImplementations } from '@segundo/temporal-graph-tools/workflow-bundler'
-import {
-  buildWorkflowBundleCode,
-  instantiateActivities,
-} from '@segundo/temporal-graph-tools/workflow-bundler'
-import { collectWorkflowBuildResults } from '@segundo/temporal-graph-tools/workflow/collection'
+import { isAbsolute, resolve, join } from 'node:path'
+import { mkdtemp, writeFile } from 'node:fs/promises'
+import { createRequire } from 'node:module'
+import type { ActivityBundle, WorkflowBuildResult, WorkflowSourceArtifact } from './types.js'
+import type { ActivityImplementations } from './workflow-bundler.js'
+import { buildWorkflowBundleCode } from './workflow-bundler.js'
+import { collectWorkflowBuildResults } from './workflow/collection.js'
 
 export type BundleWorkflowsOptions = {
   filename?: string
+  activityBundle?: BundleActivitiesOptions
 }
 
 export type BundleWorkflowsResult = {
-  activities: ActivityImplementations
+  activityBundle: BundledActivitiesArtifact
   workflowBundle: { code: string }
+}
+
+export type BundleActivitiesOptions = {
+  entrypoints?: readonly string[]
+  filename?: string
+  externals?: readonly string[]
+}
+
+export type BundledActivitiesArtifact = {
+  filename: string
+  code: string
+  map?: string
+}
+
+type EsbuildApi = typeof import('esbuild')
+
+let cachedEsbuild: EsbuildApi | undefined
+
+async function loadEsbuild(): Promise<EsbuildApi> {
+  if (cachedEsbuild) {
+    return cachedEsbuild
+  }
+
+  const createLoadError = (error: unknown): Error => {
+    if (error instanceof Error) {
+      error.message = `Failed to load esbuild. Install it as a dependency before calling bundleWorkflows(). Original error: ${error.message}`
+
+      return error
+    }
+
+    return new Error(
+      `Failed to load esbuild. Install it as a dependency before calling bundleWorkflows(). Original error: ${String(
+        error,
+      )}`,
+    )
+  }
+
+  try {
+    const esbuildModule = await import('esbuild')
+
+    cachedEsbuild = esbuildModule
+
+    return esbuildModule
+  } catch (error) {
+    throw createLoadError(error)
+  }
+}
+
+export async function loadActivitiesFromBundle(
+  bundle: BundledActivitiesArtifact,
+): Promise<ActivityImplementations> {
+  if (!bundle || typeof bundle.code !== 'string' || bundle.code.trim().length === 0) {
+    throw new Error('Activity bundle code must be a non-empty string.')
+  }
+
+  const source = ensureActivityInlineSourceMap(bundle.code, bundle.map)
+  const tempDir = await mkdtemp(join(process.cwd(), '.temporal-graph-tools-'))
+  const tempFile = join(
+    tempDir,
+    `activities-${Date.now()}-${Math.random().toString(16).slice(2)}.cjs`,
+  )
+
+  await writeFile(tempFile, source, 'utf8')
+  const require = createRequire(import.meta.url)
+  const moduleNamespace = require(tempFile) as Record<string, unknown>
+  const activitiesExport = moduleNamespace.activities
+
+  if (isActivityImplementations(activitiesExport)) {
+    return activitiesExport
+  }
+
+  const collected: ActivityImplementations = {}
+
+  Object.entries(moduleNamespace).forEach(([key, value]) => {
+    if (typeof value === 'function') {
+      collected[key] = value as (...args: unknown[]) => unknown
+    }
+  })
+
+  if (Object.keys(collected).length > 0) {
+    return collected
+  }
+
+  throw new Error('Activity bundle did not expose an activities object or callable exports.')
 }
 
 export async function bundleWorkflows(
@@ -47,12 +129,15 @@ export async function bundleWorkflows(
   })
 
   const collection = collectWorkflowBuildResults(plans)
-  const activities = await instantiateActivities(collection.activities)
+  const activityBundle = await bundleActivitiesWithEsbuild(
+    collection.activities,
+    options?.activityBundle,
+  )
   const filename = options?.filename ?? createBundleFilename(collection.workflows)
   const code = await buildWorkflowBundleCode(collection.workflows, filename)
 
   return {
-    activities,
+    activityBundle,
     workflowBundle: { code },
   }
 }
@@ -77,4 +162,150 @@ function sanitizeFilenameBase(candidate: string): string {
   }
 
   return sanitized
+}
+
+async function bundleActivitiesWithEsbuild(
+  bundles: Record<string, ActivityBundle>,
+  options: BundleActivitiesOptions = {},
+): Promise<BundledActivitiesArtifact> {
+  const entrypoints = normalizeActivityEntrypoints(
+    options.entrypoints ?? deriveActivityEntrypoints(bundles),
+  )
+
+  if (entrypoints.length === 0) {
+    throw new Error('bundleActivities requires at least one entrypoint.')
+  }
+
+  const filename = (options.filename ?? 'activities.bundle.cjs').trim()
+  const externals = new Set<string>(['@primero.ai/temporal-graph-tools', '@swc/*'])
+
+  ;(options.externals ?? []).forEach((name) => {
+    if (typeof name === 'string' && name.trim().length > 0) {
+      externals.add(name.trim())
+    }
+  })
+
+  const entrySource = createActivitiesEntrySource(entrypoints)
+  const esbuild = await loadEsbuild()
+  const buildResult = await esbuild.build({
+    stdin: {
+      contents: entrySource,
+      resolveDir: process.cwd(),
+      sourcefile: filename,
+      loader: 'ts',
+    },
+    bundle: true,
+    platform: 'node',
+    format: 'cjs',
+    target: ['node18'],
+    absWorkingDir: process.cwd(),
+    outfile: filename,
+    write: false,
+    sourcemap: 'inline',
+    external: Array.from(externals),
+  })
+  const jsFile = buildResult.outputFiles?.find(
+    (file) => file.path.endsWith('.js') || file.path.endsWith('.mjs') || file.path.endsWith('.cjs'),
+  )
+  const mapFile = buildResult.outputFiles?.find(
+    (file) =>
+      file.path.endsWith('.js.map') ||
+      file.path.endsWith('.mjs.map') ||
+      file.path.endsWith('.cjs.map'),
+  )
+
+  if (!jsFile) {
+    throw new Error('Failed to generate activities bundle.')
+  }
+
+  return {
+    filename,
+    code: jsFile.text,
+    ...(mapFile ? { map: mapFile.text } : {}),
+  }
+}
+
+function normalizeActivityEntrypoints(entrypoints: readonly string[]): string[] {
+  return entrypoints
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0)
+    .map((entry) => (isAbsolute(entry) ? entry : resolve(process.cwd(), entry)))
+}
+
+function deriveActivityEntrypoints(bundles: Record<string, ActivityBundle>): string[] {
+  const paths = new Set<string>()
+
+  Object.values(bundles).forEach((bundle) => {
+    if (bundle?.sourceFile) {
+      paths.add(bundle.sourceFile)
+    }
+  })
+
+  if (paths.size === 0) {
+    throw new Error(
+      'Unable to derive activity sources automatically. Provide activityBundle.entrypoints.',
+    )
+  }
+
+  return Array.from(paths)
+}
+
+function createActivitiesEntrySource(entrypoints: string[]): string {
+  const imports = entrypoints
+    .map((entry, index) => `import * as module${index} from ${JSON.stringify(entry)};`)
+    .join('\n')
+  const moduleRefs = entrypoints.map((_, index) => `module${index}`).join(', ')
+
+  return `
+${imports}
+
+const merged = {} as Record<string, unknown>;
+for (const mod of [${moduleRefs}]) {
+  if (!mod || typeof mod !== 'object') {
+    continue;
+  }
+  const candidate = (mod as { activities?: unknown }).activities;
+  if (candidate && typeof candidate === 'object') {
+    Object.assign(merged, candidate as Record<string, unknown>);
+    continue;
+  }
+  for (const [key, value] of Object.entries(mod)) {
+    if (key === 'default' || key === '__esModule') {
+      continue;
+    }
+    if (value && typeof value === 'object' && 'activity' in (value as { activity?: unknown })) {
+      const activity = (value as { activity?: unknown }).activity;
+      if (typeof activity === 'function') {
+        merged[key] = activity;
+        continue;
+      }
+    }
+    if (typeof value === 'function') {
+      merged[key] = value;
+    }
+  }
+}
+
+export const activities = merged;
+`.trimStart()
+}
+
+function ensureActivityInlineSourceMap(code: string, map?: string): string {
+  const marker = '//# sourceMappingURL=data:application/json;base64,'
+
+  if (!map || code.includes(marker)) {
+    return code
+  }
+
+  const base64 = Buffer.from(map, 'utf8').toString('base64')
+
+  return `${code}\n${marker}${base64}`
+}
+
+function isActivityImplementations(value: unknown): value is ActivityImplementations {
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
+
+  return Object.values(value).every((entry) => typeof entry === 'function')
 }

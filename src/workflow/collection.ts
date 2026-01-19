@@ -3,8 +3,8 @@ import type {
   WorkflowBuildResult,
   WorkflowCollectionBuildResult,
   WorkflowSourceArtifact,
-} from '@segundo/temporal-graph-tools/types'
-import { deepEqual } from '@segundo/temporal-graph-tools/utils/deep-equal'
+} from '../types.js'
+import { deepEqual } from '../utils/deep-equal.js'
 
 export function collectWorkflowBuildResults(
   results: readonly WorkflowBuildResult[],
@@ -40,11 +40,13 @@ export function collectWorkflowBuildResults(
       }
 
       const configMatches = deepEqual(existing.config ?? undefined, bundle.config ?? undefined)
+      const sourceMatches = (existing.sourceFile ?? null) === (bundle.sourceFile ?? null)
 
       if (
         existing.implementation !== bundle.implementation ||
         !configMatches ||
-        (existing.name ?? null) !== (bundle.name ?? null)
+        (existing.name ?? null) !== (bundle.name ?? null) ||
+        !sourceMatches
       ) {
         throw new Error(
           `Activity '${key}' is defined multiple times with conflicting implementations.`,

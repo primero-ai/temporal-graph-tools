@@ -24,8 +24,8 @@
     "outDir": "dist",
     "baseUrl": ".",
     "paths": {
-      "@segundo/temporal-graph-tools": ["src/index.ts"],
-      "@segundo/temporal-graph-tools/*": ["src/*"]
+      "@primero.ai/temporal-graph-tools": ["src/index.ts"],
+      "@primero.ai/temporal-graph-tools/*": ["src/*"]
     }
   },
   "include": ["src", "examples/**/*.ts"],
